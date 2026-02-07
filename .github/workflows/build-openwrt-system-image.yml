@@ -17,6 +17,7 @@ on:
         options:
           - openwrt_main
           - immortalwrt_master
+          - immortalwrt_openwrt-24.10
           - lede_master
       openwrt_board:
         description: "Select device board"
