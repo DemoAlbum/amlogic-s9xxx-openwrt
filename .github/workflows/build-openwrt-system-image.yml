@@ -482,6 +482,39 @@ jobs:
           kernel_usage: ${{ inputs.kernel_usage }}
           builder_name: ${{ inputs.builder_name }}
 
+      - name: Rename packaged OpenWrt images
+        if: ${{ env.PACKAGED_STATUS == 'success' && !cancelled() }}
+        run: |
+          set -e
+          cd "${{ env.PACKAGED_OUTPUTPATH }}"
+
+          # 获取你在上文步骤中定义的变量
+          S_NAME="${{ env.REPO_NAME }}"
+          S_BRANCH="${{ env.REPO_BRANCH }}"
+          K_USAGE="${{ inputs.kernel_usage }}"
+          DATE="$(date +%Y.%m.%d)"
+
+          for f in *.img.gz; do
+            [ -e "$f" ] || continue
+            echo "Original: $f"
+
+            # 1. 提取内核版本号 (如 6.12.68 或 6.1.161)
+            # 逻辑：匹配 _k 后面直到下一个下划线的内容
+            KERNEL_VER=$(echo "$f" | sed -n 's/.*_k\([0-9.]*\)_.*/\1/p')
+
+            # 2. 提取硬件信息 (保留处理器平台和具体型号)
+            HW_INFO=$(echo "$f" | sed "s/^openwrt_${S_NAME}_//; s/_k${KERNEL_VER}.*//")
+
+            # 3. 构造全新文件名
+            # 格式：openwrt_源码名_分支名_处理器平台_型号_内核版本_内核用途_日期.img.gz
+            NEW_NAME="openwrt_${S_NAME}_${S_BRANCH}_${HW_INFO}_k${KERNEL_VER}_${K_USAGE}_${DATE}.img.gz"
+
+            echo "Renamed to: $NEW_NAME"
+            mv "$f" "$NEW_NAME"
+          done
+
+          ls -lh
+
       - name: Upload the packaged OpenWrt
         uses: ncipollo/release-action@main
         if: ${{ env.PACKAGED_STATUS == 'success' && !cancelled() }}
